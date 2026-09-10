@@ -16,21 +16,17 @@ default_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
 
 def index_chunks_in_vector_db(repo_name: str, chunks: List[Dict[str, Any]]) -> int:
     """Stores repository code chunks into a dedicated ChromaDB collection."""
-    # Collections in Chroma cannot contain slashes or invalid characters
     collection_name = repo_name.replace("/", "_").replace("\\", "_")
     
-    # Get or create collection
     collection = chroma_client.get_or_create_collection(
         name=collection_name,
         embedding_function=default_ef
     )
 
-    documents = [c["text"] for c in chunks]
+    documents = [c["page_content"] for c in chunks]
     metadatas = [c["metadata"] for c in chunks]
-    # Unique ID for each chunk: "filename_chunkindex"
-    ids = [f"{c['metadata']['source_file']}_{c['metadata']['chunk_index']}" for c in chunks]
+    ids = [f"{c['metadata']['source']}_{c['metadata']['chunk_index']}" for c in chunks]
 
-    # Add in batches to prevent hitting memory limits
     batch_size = 100
     for i in range(0, len(documents), batch_size):
         collection.upsert(
@@ -63,6 +59,22 @@ def search_similar_code(repo_name: str, query: str, top_k: int = 3) -> List[Dict
         docs = results["documents"][0]
         metas = results["metadatas"][0]
         for doc, meta in zip(docs, metas):
-            retrieved.append({"text": doc, "metadata": meta})
+            retrieved.append({"page_content": doc, "metadata": meta})
 
     return retrieved
+
+# --- Aliases to match backend/main.py imports ---
+def index_chunks(chunks: List[Dict[str, Any]], repo_url: str) -> str:
+    """Alias adapter for main.py"""
+    repo_name = repo_url.rstrip("/").split("/")[-1].replace(".git", "")
+    index_chunks_in_vector_db(repo_name, chunks)
+    return repo_name
+
+def query_vector_db(repo_name: str, query: str) -> str:
+    """Alias adapter for main.py that queries and returns a formatted string response."""
+    results = search_similar_code(repo_name, query, top_k=3)
+    if not results:
+        return "No relevant code snippets found in this repository."
+    
+    context = "\n\n".join([f"File: {r['metadata']['source']}\n```\n{r['page_content']}\n```" for r in results])
+    return f"Here are the relevant code sections found:\n\n{context}"

@@ -7,7 +7,7 @@ IGNORED_DIRS = {".git", "node_modules", "venv", "__pycache__", "dist", "build", 
 IGNORED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".pdf", ".zip", ".tar", ".gz", ".exe", ".bin", ".lock"}
 ALLOWED_EXTENSIONS = {".py", ".js", ".jsx", ".ts", ".tsx", ".cpp", ".c", ".h", ".hpp", ".java", ".cs", ".go", ".rs", ".md", ".txt"}
 
-def parse_and_chunk_repo(repo_path: str, chunk_size: int = 1000, chunk_overlap: int = 150) -> List[Dict[str, Any]]:
+def load_and_chunk_files(repo_path: str, chunk_size: int = 1000, chunk_overlap: int = 150) -> List[Dict[str, Any]]:
     """Traverses a cloned repository, reads allowed code files, and chunks them into text blocks with metadata."""
     documents = []
 
@@ -42,9 +42,9 @@ def parse_and_chunk_repo(repo_path: str, chunk_size: int = 1000, chunk_overlap: 
 
                     for idx, chunk in enumerate(chunks):
                         documents.append({
-                            "text": chunk,
+                            "page_content": chunk,  # Key matches vector_store expectations
                             "metadata": {
-                                "source_file": relative_path,
+                                "source": relative_path,  # Key matches vector_store expectations
                                 "chunk_index": idx,
                                 "total_chunks": len(chunks)
                             }
