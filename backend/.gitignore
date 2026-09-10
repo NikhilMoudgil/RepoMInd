@@ -35,3 +35,6 @@ Thumbs.db
 
 # Vercel deployment artifacts
 .vercel/
+# RepoMind Local Storage
+backend/cloned_repos/
+backend/chroma_db/
